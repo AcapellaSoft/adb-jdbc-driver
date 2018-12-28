@@ -30,7 +30,7 @@ def getVersionName() {
     }
     def output = stdout.toString().trim()
     output = output.replaceFirst(/([\d.]+)/, '$1')
-    output = output.replaceFirst(/([\d.]+)-(\d+)-.*/, '$1.$2')
+    output = output.replaceFirst(/([\d.]+)-(\d+)-.*/, '$1-SNAPSHOT')
     return output
 }
 
@@ -75,7 +75,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
     compile group: 'io.grpc', name: 'grpc-netty-shaded', version: '1.17.1'
-    compile group: 'ru.acapella.db', name: 'adb-api-grpc', version: '0.1.0'
+    compile group: 'ru.acapella.db', name: 'adb-api-grpc', version: '0.1.0-SNAPSHOT'
     testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5.1.0'
     testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.1.0'
 }
