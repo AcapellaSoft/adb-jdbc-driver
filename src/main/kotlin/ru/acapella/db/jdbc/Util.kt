@@ -1,7 +1,25 @@
 package ru.acapella.db.jdbc
 
+import io.grpc.Metadata
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import java.math.BigDecimal
 import java.sql.*
+
+object ErrorCode {
+    // common (10xx)
+
+    // transaction (11xx)
+    const val TX_CONFLICT = 1101
+
+    // sql (12xx)
+    const val SQL_EXCEPTION = 1201
+}
+
+private val errorKey: Metadata.Key<Int> = Metadata.Key.of("INTERNAL_CODE", object : Metadata.AsciiMarshaller<Int> {
+    override fun toAsciiString(value: Int) = value.toString()
+    override fun parseAsciiString(serialized: String) = serialized.toInt()
+})
 
 internal fun sqlTypeToJavaClass(type: Int): Class<*> {
     return when (type) {
@@ -26,3 +44,18 @@ internal fun sqlTypeToJavaClass(type: Int): Class<*> {
 internal fun sqlTypeToJavaClassName(type: Int): String = sqlTypeToJavaClass(type).name
 
 internal fun sqlTypeToName(type: Int) = JDBCType.valueOf(type).name
+
+internal inline fun <T> convertError(block: () -> T): T {
+    try {
+        return block()
+    } catch (ex: StatusRuntimeException) {
+        if (ex.status.code == Status.Code.INTERNAL) {
+            val internalCode = ex.trailers[errorKey]
+            when (internalCode) {
+                ErrorCode.TX_CONFLICT -> throw SQLTransactionRollbackException(ex.message)
+                else -> throw SQLException(ex.message)
+            }
+        }
+        throw ex
+    }
+}

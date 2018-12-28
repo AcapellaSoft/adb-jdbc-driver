@@ -1,5 +1,6 @@
 package ru.acapella.db.jdbc
 
+import com.google.protobuf.Empty
 import io.grpc.ManagedChannelBuilder
 import ru.acapella.db.grpc.SqlGrpc
 import ru.acapella.db.grpc.TransactionGrpc
@@ -15,6 +16,7 @@ internal val DB_DRIVER_VERSION = pack.implementationVersion ?: "0.0.0"
 internal val DB_DRIVER_MAJOR_VERSION = pack.implementationVersion?.split(".")?.getOrNull(0)?.toInt() ?: 0
 internal val DB_DRIVER_MINOR_VERSION = pack.implementationVersion?.split(".")?.getOrNull(1)?.toInt() ?: 0
 
+@Suppress("unused")
 class Driver : Driver {
     companion object {
         init {
@@ -34,7 +36,7 @@ class Driver : Driver {
         return urlRegex.matchEntire(url) != null
     }
 
-    override fun connect(url: String, info: Properties): Connection {
+    override fun connect(url: String, info: Properties): Connection = convertError {
         val urlMatch = urlRegex.matchEntire(url) ?: throw SQLException("Bad connection url '$url'")
         val host = urlMatch.groupValues[1]
         val port = urlMatch.groupValues[2].toInt()
@@ -43,6 +45,7 @@ class Driver : Driver {
             .build()
         val txService = TransactionGrpc.newBlockingStub(channel)
         val sqlService = SqlGrpc.newBlockingStub(channel)
-        return Connection(txService, sqlService)
+        val meta = sqlService.metadata(Empty.getDefaultInstance())
+        Connection(txService, sqlService, url, meta)
     }
 }

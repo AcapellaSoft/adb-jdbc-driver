@@ -1,27 +1,36 @@
 package ru.acapella.db.jdbc
 
-import ru.acapella.db.grpc.SqlResultSetPb
+import ru.acapella.db.grpc.SqlVariantPb
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
 import java.sql.*
 import java.sql.Array
 import java.sql.Date
-import java.sql.ResultSet
 import java.util.*
+import kotlin.collections.HashMap
 
-class ResultSet(
-    private val statement: Statement,
-    private val meta: ResultSetMetaData,
-    private val response: SqlResultSetPb
-) : ResultSet {
-    private var rowIndex = -1
-    private var closed = false
+private class TypeMapperBuilder {
+    val map = HashMap<Class<*>, HashMap<Class<*>, (Any) -> Any>>()
 
-    override fun findColumn(columnLabel: String): Int {
-        return (0 until meta.columnCount)
-            .indexOfFirst { meta.getColumnLabel(it) == columnLabel }
+    @Suppress("UNCHECKED_CAST")
+    inline fun <reified T : Any, reified R : Any> map(noinline mapper: T.() -> R) {
+        val innerMap = map.computeIfAbsent(T::class.java) { HashMap() }
+        innerMap[R::class.java] = { (it as T).mapper() }
     }
+}
+
+private val typeMapper = TypeMapperBuilder().apply {
+    // todo all mappers
+    map<Int, Long> { toLong() }
+    map<Long, Int> { toInt() }
+    map<BigDecimal, Double> { toDouble() }
+    map<Double, BigDecimal> { BigDecimal.valueOf(this) }
+}.map
+
+abstract class VariantResultSet : ResultSet {
+    private var closed = false
+    private var wasNull = false
 
     override fun getNClob(columnIndex: Int) = throw SQLFeatureNotSupportedException()
     override fun getNClob(columnLabel: String?) = throw SQLFeatureNotSupportedException()
@@ -152,28 +161,22 @@ class ResultSet(
     override fun last() = throw SQLFeatureNotSupportedException()
     override fun relative(rows: Int) = throw SQLFeatureNotSupportedException()
     override fun absolute(row: Int) = throw SQLFeatureNotSupportedException()
-    override fun wasNull() = throw SQLFeatureNotSupportedException()
     override fun getRow() = throw SQLFeatureNotSupportedException()
     override fun first() = throw SQLFeatureNotSupportedException()
     override fun setFetchSize(rows: Int) = throw SQLFeatureNotSupportedException()
     override fun getObject(columnIndex: Int, map: MutableMap<String, Class<*>>?) = throw SQLFeatureNotSupportedException()
     override fun getObject(columnLabel: String?, map: MutableMap<String, Class<*>>?) = throw SQLFeatureNotSupportedException()
 
-    override fun getStatement() = statement
     override fun getWarnings() = null
-    override fun isFirst() = rowIndex == 0
-    override fun isLast() = rowIndex == response.rowsCount - 1
     override fun rowDeleted() = false
-    override fun isAfterLast() = rowIndex >= response.rowsCount
     override fun getType() = ResultSet.TYPE_FORWARD_ONLY
     override fun getHoldability() = ResultSet.CLOSE_CURSORS_AT_COMMIT
     override fun getFetchSize() = 0
     override fun isClosed() = closed
-    override fun isBeforeFirst() = rowIndex == -1
     override fun getConcurrency() = ResultSet.CONCUR_READ_ONLY
     override fun clearWarnings() {}
-    override fun getMetaData() = meta
     override fun getFetchDirection() = ResultSet.FETCH_FORWARD
+    override fun wasNull() = wasNull
 
     override fun close() {
         closed = true
@@ -216,7 +219,7 @@ class ResultSet(
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> getObject(columnIndex: Int, type: Class<T>): T {
-        val sqlType = meta.getColumnType(columnIndex)
+        val sqlType = columnType(columnIndex)
         val value: Any? = getColumn(columnIndex)
         if (value != null && !type.isInstance(value)) throw SQLException("Cannot convert column type $sqlType to $type")
         return value as T
@@ -233,21 +236,9 @@ class ResultSet(
         throw SQLException()
     }
 
-    override fun next(): Boolean {
-        if (rowIndex < response.rowsCount) {
-            rowIndex += 1
-        }
-        return !isAfterLast
-    }
-
-    override fun isWrapperFor(iface: Class<*>): Boolean {
-        return iface == ru.acapella.db.jdbc.ResultSet::class.java
-    }
-
     private inline fun <reified T> getColumn(columnIndex: Int): T {
-        val row = response.rowsList[rowIndex]
-        val variant = row.fieldsList[columnIndex - 1]
-        val value = when {
+        val variant = row[columnIndex - 1]
+        val value: Any? = when {
             variant.hasVDecimal() -> BigDecimal(variant.vDecimal)
             variant.hasVBytes() -> variant.vBytes.toByteArray()
             variant.hasVByte() -> variant.vByte.toByte()
@@ -263,10 +254,20 @@ class ResultSet(
             variant.hasVTimestamp() -> Timestamp(variant.vTimestamp)
             else -> null
         }
-        return value as T
+        wasNull = value == null
+        if (value == null || T::class.java.isInstance(value)) return value as T
+
+        val converted = typeMapper[value::class.java]
+            ?.get(T::class.java)
+            ?.invoke(value)
+            ?: throw SQLException("Cannot convert ${value::class.java} to ${T::class.java}")
+        return converted as T
     }
 
     private inline fun <reified T> getColumn(columnLabel: String): T {
         return getColumn(findColumn(columnLabel))
     }
+
+    abstract val row: List<SqlVariantPb>
+    abstract fun columnType(index: Int): Int
 }

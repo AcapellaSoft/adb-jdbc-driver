@@ -11,7 +11,6 @@ import java.net.URL
 import java.sql.*
 import java.sql.Date
 import java.sql.PreparedStatement
-import java.sql.ResultSet
 import java.util.*
 
 class PreparedStatement(
@@ -161,16 +160,16 @@ class PreparedStatement(
         setParameter(parameterIndex, x) { vByte = it.toInt() }
     }
 
-    override fun executeQuery(): ResultSet {
+    override fun executeQuery() = convertError {
         // todo partial fetch
-        return connection.withTransaction { tx ->
+        connection.withTransaction { tx ->
             val requestBuilder = SqlQueryRequestPb.newBuilder()
                 .setSql(sql)
                 .addAllParameters(parameters.asList())
             if (tx != null) requestBuilder.transaction = tx
             if (fetchSize != 0) requestBuilder.fetchSize = fetchSize
             val response = connection.sqlService.query(requestBuilder.build())
-            ResultSet(this, resultMeta, response)
+            StatementResultSet(response, this, resultMeta)
         }
     }
 
@@ -193,8 +192,8 @@ class PreparedStatement(
         return false
     }
 
-    override fun executeLargeUpdate(): Long {
-        return connection.withTransaction { tx ->
+    override fun executeLargeUpdate(): Long = convertError {
+        connection.withTransaction { tx ->
             val requestBuilder = SqlExecuteRequestPb.newBuilder()
                 .setSql(sql)
                 .addAllParameters(parameters.asList())
