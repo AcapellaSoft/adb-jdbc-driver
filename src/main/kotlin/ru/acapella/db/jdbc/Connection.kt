@@ -13,6 +13,7 @@ class Connection(
     internal val txService: TransactionGrpc.TransactionBlockingStub,
     internal val sqlService: SqlGrpc.SqlBlockingStub,
     internal val url: String,
+    internal val database: String,
     meta: SqlDatabaseMetadataPb
 ) : Connection {
     private var autoCommit = false
@@ -61,7 +62,7 @@ class Connection(
     override fun getTransactionIsolation() = Connection.TRANSACTION_SERIALIZABLE
     override fun getMetaData() = metadata
     override fun getCatalog() = null
-    override fun getSchema() = "public"
+    override fun getSchema() = database
 
     override fun prepareStatement(sql: String): PreparedStatement {
         return prepareStatement(
@@ -92,6 +93,7 @@ class Connection(
         if (resultSetHoldability != ResultSet.CLOSE_CURSORS_AT_COMMIT) throw SQLFeatureNotSupportedException()
 
         val response = sqlService.prepare(SqlPrepareRequestPb.newBuilder()
+            .setDatabase(database)
             .setSql(sql)
             .build())
 

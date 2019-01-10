@@ -164,6 +164,7 @@ class PreparedStatement(
         // todo partial fetch
         connection.withTransaction { tx ->
             val requestBuilder = SqlQueryRequestPb.newBuilder()
+                .setDatabase(connection.database)
                 .setSql(sql)
                 .addAllParameters(parameters.asList())
             if (tx != null) requestBuilder.transaction = tx
@@ -195,6 +196,7 @@ class PreparedStatement(
     override fun executeLargeUpdate(): Long = convertError {
         connection.withTransaction { tx ->
             val requestBuilder = SqlExecuteRequestPb.newBuilder()
+                .setDatabase(connection.database)
                 .setSql(sql)
                 .addAllParameters(parameters.asList())
             if (tx != null) requestBuilder.transaction = tx

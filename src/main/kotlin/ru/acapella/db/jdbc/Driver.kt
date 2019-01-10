@@ -24,7 +24,7 @@ class Driver : Driver {
         }
     }
 
-    private val urlRegex = Regex("jdbc:acapelladb://([^:]+):(\\d+)")
+    private val urlRegex = Regex("jdbc:acapelladb://([^:]+):(\\d+)/(.+)")
 
     override fun getMinorVersion() = DB_DRIVER_MINOR_VERSION
     override fun getMajorVersion() = DB_DRIVER_MAJOR_VERSION
@@ -40,12 +40,13 @@ class Driver : Driver {
         val urlMatch = urlRegex.matchEntire(url) ?: throw SQLException("Bad connection url '$url'")
         val host = urlMatch.groupValues[1]
         val port = urlMatch.groupValues[2].toInt()
+        val database = urlMatch.groupValues[3]
         val channel = ManagedChannelBuilder.forAddress(host, port)
             .usePlaintext()
             .build()
         val txService = TransactionGrpc.newBlockingStub(channel)
         val sqlService = SqlGrpc.newBlockingStub(channel)
         val meta = sqlService.metadata(Empty.getDefaultInstance())
-        Connection(txService, sqlService, url, meta)
+        Connection(txService, sqlService, url, database, meta)
     }
 }
