@@ -13,7 +13,7 @@ class Connection(
     internal val txService: TransactionGrpc.TransactionBlockingStub,
     internal val sqlService: SqlGrpc.SqlBlockingStub,
     internal val url: String,
-    internal val database: String,
+    internal val database: String?,
     meta: SqlDatabaseMetadataPb
 ) : Connection {
     private var autoCommit = false
@@ -92,10 +92,11 @@ class Connection(
         if (resultSetConcurrency != ResultSet.CONCUR_READ_ONLY) throw SQLFeatureNotSupportedException()
         if (resultSetHoldability != ResultSet.CLOSE_CURSORS_AT_COMMIT) throw SQLFeatureNotSupportedException()
 
-        val response = sqlService.prepare(SqlPrepareRequestPb.newBuilder()
-            .setDatabase(database)
+        val request = SqlPrepareRequestPb.newBuilder()
             .setSql(sql)
-            .build())
+        if (database != null) request.database = database
+
+        val response = sqlService.prepare(request.build())
 
         val parameterMeta = ParameterMetaData(response.parametersList)
         val resultMeta = ResultSetMetaData(response.columnsList)

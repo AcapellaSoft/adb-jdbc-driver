@@ -2,6 +2,7 @@ package ru.acapella.db.jdbc
 
 import com.google.protobuf.Empty
 import io.grpc.ManagedChannelBuilder
+import ru.acapella.db.grpc.LoginRequest
 import ru.acapella.db.grpc.SqlGrpc
 import ru.acapella.db.grpc.TransactionGrpc
 import java.sql.Driver
@@ -24,7 +25,7 @@ class Driver : Driver {
         }
     }
 
-    private val urlRegex = Regex("jdbc:acapelladb://([^:]+):(\\d+)/(.+)")
+    private val urlRegex = Regex("jdbc:acapelladb://([^:]+):(\\d+)(/(.+))?")
 
     override fun getMinorVersion() = DB_DRIVER_MINOR_VERSION
     override fun getMajorVersion() = DB_DRIVER_MAJOR_VERSION
@@ -40,13 +41,26 @@ class Driver : Driver {
         val urlMatch = urlRegex.matchEntire(url) ?: throw SQLException("Bad connection url '$url'")
         val host = urlMatch.groupValues[1]
         val port = urlMatch.groupValues[2].toInt()
-        val database = urlMatch.groupValues[3]
+        val database = urlMatch.groupValues[4].takeIf { it.isNotEmpty() }
         val channel = ManagedChannelBuilder.forAddress(host, port)
             .usePlaintext()
             .build()
-        val txService = TransactionGrpc.newBlockingStub(channel)
-        val sqlService = SqlGrpc.newBlockingStub(channel)
+        var txService = TransactionGrpc.newBlockingStub(channel)
+        var sqlService = SqlGrpc.newBlockingStub(channel)
         val meta = sqlService.metadata(Empty.getDefaultInstance())
+
+        val userName = info["user"] as String?
+        val password = info["password"] as String?
+        if (userName != null && password != null) {
+            val response = sqlService.login(LoginRequest.newBuilder()
+                .setUserName(userName)
+                .setPassword(password)
+                .build())
+            val credentials = JwtClientCredentials(response.token)
+            txService = txService.withCallCredentials(credentials)
+            sqlService = sqlService.withCallCredentials(credentials)
+        }
+
         Connection(txService, sqlService, url, database, meta)
     }
 }

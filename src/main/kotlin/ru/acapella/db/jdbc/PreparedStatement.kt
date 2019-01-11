@@ -164,10 +164,10 @@ class PreparedStatement(
         // todo partial fetch
         connection.withTransaction { tx ->
             val requestBuilder = SqlQueryRequestPb.newBuilder()
-                .setDatabase(connection.database)
                 .setSql(sql)
                 .addAllParameters(parameters.asList())
             if (tx != null) requestBuilder.transaction = tx
+            connection.database?.let { requestBuilder.database = it }
             if (fetchSize != 0) requestBuilder.fetchSize = fetchSize
             val response = connection.sqlService.query(requestBuilder.build())
             StatementResultSet(response, this, resultMeta)
@@ -196,10 +196,10 @@ class PreparedStatement(
     override fun executeLargeUpdate(): Long = convertError {
         connection.withTransaction { tx ->
             val requestBuilder = SqlExecuteRequestPb.newBuilder()
-                .setDatabase(connection.database)
                 .setSql(sql)
                 .addAllParameters(parameters.asList())
             if (tx != null) requestBuilder.transaction = tx
+            connection.database?.let { requestBuilder.database = it }
             val response = connection.sqlService.execute(requestBuilder.build())
             response.rowsCount
         }

@@ -70,9 +70,9 @@ open class Statement(private val connection: Connection) : Statement {
     override fun executeLargeUpdate(sql: String): Long = convertError {
         connection.withTransaction { tx ->
             val requestBuilder = SqlExecuteRequestPb.newBuilder()
-                .setDatabase(connection.database)
                 .setSql(sql)
             if (tx != null) requestBuilder.transaction = tx
+            connection.database?.let { requestBuilder.database = it }
             val response = connection.sqlService.execute(requestBuilder.build())
             response.rowsCount
         }
@@ -81,14 +81,14 @@ open class Statement(private val connection: Connection) : Statement {
     override fun executeQuery(sql: String) = convertError {
         // todo remove prepare call
         connection.withTransaction { tx ->
-            val prepareResponse = connection.sqlService.prepare(SqlPrepareRequestPb.newBuilder()
-                .setDatabase(connection.database)
+            val prepareRequest = SqlPrepareRequestPb.newBuilder()
                 .setSql(sql)
-                .build())
+            connection.database?.let { prepareRequest.database = it }
+            val prepareResponse = connection.sqlService.prepare(prepareRequest.build())
             val requestBuilder = SqlQueryRequestPb.newBuilder()
-                .setDatabase(connection.database)
                 .setSql(sql)
             if (tx != null) requestBuilder.transaction = tx
+            connection.database?.let { requestBuilder.database = it }
             if (fetchSize != 0) requestBuilder.fetchSize = fetchSize
             val response = connection.sqlService.query(requestBuilder.build())
             StatementResultSet(response, this, ResultSetMetaData(prepareResponse.columnsList))
