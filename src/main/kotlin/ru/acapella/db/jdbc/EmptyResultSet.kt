@@ -2,7 +2,7 @@ package ru.acapella.db.jdbc
 
 import java.sql.Types
 
-object EmptyResultSet : ListResultSet(emptyList()) {
+object EmptyResultSet : ListResultSet(emptyList(), 0) {
     override fun columnType(index: Int) = Types.NULL
     override fun findColumn(columnLabel: String) = -1
     override fun getStatement() = null

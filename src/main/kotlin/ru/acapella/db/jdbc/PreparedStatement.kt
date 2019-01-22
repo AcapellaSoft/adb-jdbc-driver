@@ -1,9 +1,8 @@
 package ru.acapella.db.jdbc
 
 import com.google.protobuf.ByteString
-import ru.acapella.db.grpc.SqlExecuteRequestPb
-import ru.acapella.db.grpc.SqlQueryRequestPb
-import ru.acapella.db.grpc.SqlVariantPb
+import io.grpc.stub.StreamObserver
+import ru.acapella.db.grpc.*
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
@@ -12,6 +11,7 @@ import java.sql.*
 import java.sql.Date
 import java.sql.PreparedStatement
 import java.util.*
+import java.util.concurrent.ArrayBlockingQueue
 
 class PreparedStatement(
     connection: Connection,
@@ -161,16 +161,29 @@ class PreparedStatement(
     }
 
     override fun executeQuery() = convertError {
-        // todo partial fetch
+        val receiveQueue = ArrayBlockingQueue<Result<SqlResultSetPb>>(1)
+
+        val requestStream = connection.sqlStreamService.queryStream(object : StreamObserver<SqlResultSetPb> {
+            override fun onNext(value: SqlResultSetPb) {
+                receiveQueue.add(Result.success(value))
+            }
+            override fun onError(t: Throwable) {
+                receiveQueue.add(Result.failure(t))
+            }
+            override fun onCompleted() {}
+        })
+
         connection.withTransaction { tx ->
             val requestBuilder = SqlQueryRequestPb.newBuilder()
                 .setSql(sql)
                 .addAllParameters(parameters.asList())
-            if (tx != null) requestBuilder.transaction = tx
+            tx?.let { requestBuilder.transaction = it }
             connection.database?.let { requestBuilder.database = it }
             if (fetchSize != 0) requestBuilder.fetchSize = fetchSize
-            val response = connection.sqlService.query(requestBuilder.build())
-            StatementResultSet(response, this, resultMeta)
+            requestStream.onNext(SqlQueryMessagePb.newBuilder()
+                .setRequest(requestBuilder)
+                .build())
+            StreamResultSet(requestStream, receiveQueue, this, resultMeta)
         }
     }
 

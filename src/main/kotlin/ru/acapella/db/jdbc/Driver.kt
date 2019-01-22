@@ -47,6 +47,7 @@ class Driver : Driver {
             .build()
         var txService = TransactionGrpc.newBlockingStub(channel)
         var sqlService = SqlGrpc.newBlockingStub(channel)
+        var sqlStreamService = SqlGrpc.newStub(channel)
         val meta = sqlService.metadata(Empty.getDefaultInstance())
 
         val userName = info["user"] as String?
@@ -59,8 +60,9 @@ class Driver : Driver {
             val credentials = JwtClientCredentials(response.token)
             txService = txService.withCallCredentials(credentials)
             sqlService = sqlService.withCallCredentials(credentials)
+            sqlStreamService = sqlStreamService.withCallCredentials(credentials)
         }
 
-        Connection(txService, sqlService, url, database, meta)
+        Connection(txService, sqlService, sqlStreamService, url, database, meta)
     }
 }

@@ -1,12 +1,12 @@
 package ru.acapella.db.jdbc
 
-import ru.acapella.db.grpc.SqlExecuteRequestPb
-import ru.acapella.db.grpc.SqlPrepareRequestPb
-import ru.acapella.db.grpc.SqlQueryRequestPb
+import io.grpc.stub.StreamObserver
+import ru.acapella.db.grpc.*
 import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.SQLFeatureNotSupportedException
 import java.sql.Statement
+import java.util.concurrent.ArrayBlockingQueue
 
 open class Statement(private val connection: Connection) : Statement {
     private var fetchSize = 0
@@ -79,19 +79,34 @@ open class Statement(private val connection: Connection) : Statement {
     }
 
     override fun executeQuery(sql: String) = convertError {
+        val receiveQueue = ArrayBlockingQueue<Result<SqlResultSetPb>>(1)
+
+        val requestStream = connection.sqlStreamService.queryStream(object : StreamObserver<SqlResultSetPb> {
+            override fun onNext(value: SqlResultSetPb) {
+                receiveQueue.add(Result.success(value))
+            }
+            override fun onError(t: Throwable) {
+                receiveQueue.add(Result.failure(t))
+            }
+            override fun onCompleted() {}
+        })
+
         // todo remove prepare call
         connection.withTransaction { tx ->
             val prepareRequest = SqlPrepareRequestPb.newBuilder()
                 .setSql(sql)
             connection.database?.let { prepareRequest.database = it }
             val prepareResponse = connection.sqlService.prepare(prepareRequest.build())
+
             val requestBuilder = SqlQueryRequestPb.newBuilder()
                 .setSql(sql)
-            if (tx != null) requestBuilder.transaction = tx
+            tx?.let { requestBuilder.transaction = it }
             connection.database?.let { requestBuilder.database = it }
             if (fetchSize != 0) requestBuilder.fetchSize = fetchSize
-            val response = connection.sqlService.query(requestBuilder.build())
-            StatementResultSet(response, this, ResultSetMetaData(prepareResponse.columnsList))
+            requestStream.onNext(SqlQueryMessagePb.newBuilder()
+                .setRequest(requestBuilder)
+                .build())
+            StreamResultSet(requestStream, receiveQueue, this, ResultSetMetaData(prepareResponse.columnsList))
         }
     }
 

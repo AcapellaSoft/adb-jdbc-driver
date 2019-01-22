@@ -28,7 +28,7 @@ private val typeMapper = TypeMapperBuilder().apply {
     map<Double, BigDecimal> { BigDecimal.valueOf(this) }
 }.map
 
-abstract class VariantResultSet : ResultSet {
+abstract class VariantResultSet(private var fetchSize: Int) : ResultSet {
     private var closed = false
     private var wasNull = false
 
@@ -163,7 +163,6 @@ abstract class VariantResultSet : ResultSet {
     override fun absolute(row: Int) = throw SQLFeatureNotSupportedException()
     override fun getRow() = throw SQLFeatureNotSupportedException()
     override fun first() = throw SQLFeatureNotSupportedException()
-    override fun setFetchSize(rows: Int) = throw SQLFeatureNotSupportedException()
     override fun getObject(columnIndex: Int, map: MutableMap<String, Class<*>>?) = throw SQLFeatureNotSupportedException()
     override fun getObject(columnLabel: String?, map: MutableMap<String, Class<*>>?) = throw SQLFeatureNotSupportedException()
 
@@ -171,7 +170,7 @@ abstract class VariantResultSet : ResultSet {
     override fun rowDeleted() = false
     override fun getType() = ResultSet.TYPE_FORWARD_ONLY
     override fun getHoldability() = ResultSet.CLOSE_CURSORS_AT_COMMIT
-    override fun getFetchSize() = 0
+    override fun getFetchSize() = fetchSize
     override fun isClosed() = closed
     override fun getConcurrency() = ResultSet.CONCUR_READ_ONLY
     override fun clearWarnings() {}
@@ -180,6 +179,10 @@ abstract class VariantResultSet : ResultSet {
 
     override fun close() {
         closed = true
+    }
+
+    override fun setFetchSize(rows: Int) {
+        fetchSize = rows
     }
 
     override fun getDate(columnIndex: Int): Date? = getColumn(columnIndex)

@@ -2,7 +2,10 @@ package ru.acapella.db.jdbc
 
 import ru.acapella.db.grpc.SqlVariantPb
 
-abstract class ListResultSet(private val rows: List<List<SqlVariantPb>>) : VariantResultSet() {
+abstract class ListResultSet(
+    private val rows: List<List<SqlVariantPb>>,
+    fetchSize: Int
+) : VariantResultSet(fetchSize) {
     private var rowIndex = -1
 
     override fun isFirst() = rowIndex == 0

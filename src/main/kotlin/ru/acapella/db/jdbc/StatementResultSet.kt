@@ -7,7 +7,7 @@ class StatementResultSet(
     response: SqlResultSetPb,
     private val statement: Statement? = null,
     private val meta: ResultSetMetaData? = null
-) : ListResultSet(response.rowsList.map { it.fieldsList }) {
+) : ListResultSet(response.rowsList.map { it.fieldsList }, statement?.fetchSize ?: 0) {
     override fun getStatement() = statement
     override fun getMetaData() = meta
     override fun columnType(index: Int) = meta?.getColumnType(index) ?: 0

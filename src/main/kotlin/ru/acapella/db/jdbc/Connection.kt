@@ -12,6 +12,7 @@ import java.util.concurrent.Executor
 class Connection(
     internal val txService: TransactionGrpc.TransactionBlockingStub,
     internal val sqlService: SqlGrpc.SqlBlockingStub,
+    internal val sqlStreamService: SqlGrpc.SqlStub,
     internal val url: String,
     internal val database: String?,
     meta: SqlDatabaseMetadataPb
