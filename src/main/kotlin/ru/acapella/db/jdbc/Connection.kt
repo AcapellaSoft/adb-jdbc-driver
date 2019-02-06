@@ -26,7 +26,6 @@ class Connection(
     override fun prepareStatement(sql: String?, columnNames: Array<out String>?) = throw SQLFeatureNotSupportedException()
     override fun rollback(savepoint: Savepoint?) = throw SQLFeatureNotSupportedException()
     override fun setNetworkTimeout(executor: Executor?, milliseconds: Int) = throw SQLFeatureNotSupportedException()
-    override fun setTransactionIsolation(level: Int) = throw SQLFeatureNotSupportedException()
     override fun prepareCall(sql: String?) = throw SQLFeatureNotSupportedException()
     override fun prepareCall(sql: String?, resultSetType: Int, resultSetConcurrency: Int) = throw SQLFeatureNotSupportedException()
     override fun prepareCall(sql: String?, resultSetType: Int, resultSetConcurrency: Int, resultSetHoldability: Int) = throw SQLFeatureNotSupportedException()
@@ -64,6 +63,7 @@ class Connection(
     override fun getMetaData() = metadata
     override fun getCatalog() = null
     override fun getSchema() = database
+    override fun setTransactionIsolation(level: Int) {}
 
     override fun prepareStatement(sql: String): PreparedStatement {
         return prepareStatement(
