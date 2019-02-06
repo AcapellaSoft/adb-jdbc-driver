@@ -11,10 +11,10 @@ import java.util.concurrent.ArrayBlockingQueue
 class StreamResultSet(
     private val sendStream: StreamObserver<SqlQueryMessagePb>,
     private val receiveQueue: ArrayBlockingQueue<Result<SqlResultSetPb>>,
-    private val statement: ru.acapella.db.jdbc.Statement,
-    private val meta: ru.acapella.db.jdbc.ResultSetMetaData? = null
+    private val statement: ru.acapella.db.jdbc.Statement
 ) : VariantResultSet(statement.fetchSize) {
     private var resultSet: SqlResultSetPb = receiveQueue.take().getOrThrow()
+    private val meta = ResultSetMetaData(resultSet.columnsList)
     private var state = State.BEFORE_FIRST
     private var rowIndex = -1
 
@@ -35,10 +35,9 @@ class StreamResultSet(
 
     override fun getStatement() = statement
     override fun getMetaData() = meta
-    override fun columnType(index: Int) = meta?.getColumnType(index) ?: 0
+    override fun columnType(index: Int) = meta.getColumnType(index)
 
     override fun findColumn(columnLabel: String): Int {
-        if (meta == null) throw SQLException()
         return (1..meta.columnCount)
             .first { meta.getColumnLabel(it) == columnLabel }
     }

@@ -2,6 +2,7 @@ package ru.acapella.db.jdbc
 
 import ru.acapella.db.grpc.SqlColumnsMetaRequestPb
 import ru.acapella.db.grpc.SqlDatabaseMetadataPb
+import ru.acapella.db.grpc.SqlPrimaryKeysMetaRequestPb
 import ru.acapella.db.grpc.SqlTablesMetaRequestPb
 import java.sql.*
 import java.sql.Connection
@@ -206,7 +207,7 @@ class DatabaseMetaData(
         if (types != null) requestBuilder.addAllTypes(types.asList())
 
         val response = connection.sqlService.tablesMetadata(requestBuilder.build())
-        StatementResultSet(response.resultSet, meta = ResultSetMetaData(response.columnsList))
+        StatementResultSet(response, meta = ResultSetMetaData(response.columnsList))
     }
 
     override fun getPrimaryKeys(catalog: String?, schema: String?, table: String?): ResultSet {
@@ -238,7 +239,7 @@ class DatabaseMetaData(
         if (columnNamePattern != null) requestBuilder.columnNamePattern = columnNamePattern
 
         val response = connection.sqlService.columnsMetadata(requestBuilder.build())
-        StatementResultSet(response.resultSet, meta = ResultSetMetaData(response.columnsList))
+        StatementResultSet(response, meta = ResultSetMetaData(response.columnsList))
     }
 
     override fun getIndexInfo(catalog: String?, schema: String?, table: String?, unique: Boolean, approximate: Boolean): ResultSet {

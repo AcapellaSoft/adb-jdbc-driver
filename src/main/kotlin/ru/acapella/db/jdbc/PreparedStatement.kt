@@ -183,7 +183,7 @@ class PreparedStatement(
             requestStream.onNext(SqlQueryMessagePb.newBuilder()
                 .setRequest(requestBuilder)
                 .build())
-            StreamResultSet(requestStream, receiveQueue, this, resultMeta)
+            StreamResultSet(requestStream, receiveQueue, this)
         }
     }
 

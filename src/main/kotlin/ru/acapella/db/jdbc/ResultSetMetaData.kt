@@ -7,7 +7,6 @@ import java.sql.SQLFeatureNotSupportedException
 
 class ResultSetMetaData(private val columns: List<SqlColumnMetaPb>) : ResultSetMetaData {
     override fun getCatalogName(column: Int) = throw SQLFeatureNotSupportedException()
-    override fun getColumnDisplaySize(column: Int) = throw SQLFeatureNotSupportedException()
 
     override fun getTableName(column: Int): String = columns[column - 1].table
     override fun isNullable(column: Int): Int = ResultSetMetaData.columnNullable
@@ -26,6 +25,7 @@ class ResultSetMetaData(private val columns: List<SqlColumnMetaPb>) : ResultSetM
     override fun getColumnName(column: Int): String = columns[column - 1].name
     override fun isAutoIncrement(column: Int) = false
     override fun getColumnCount() = columns.size
+    override fun getColumnDisplaySize(column: Int) = columns[column - 1].displaySize
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> unwrap(iface: Class<T>): T {
