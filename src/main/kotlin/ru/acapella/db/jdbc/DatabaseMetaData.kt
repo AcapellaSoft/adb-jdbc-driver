@@ -210,8 +210,14 @@ class DatabaseMetaData(
         StatementResultSet(response, meta = ResultSetMetaData(response.columnsList))
     }
 
-    override fun getPrimaryKeys(catalog: String?, schema: String?, table: String?): ResultSet {
-        TODO("not implemented")
+    override fun getPrimaryKeys(catalog: String?, schema: String?, table: String?): ResultSet = convertError {
+        val requestBuilder = SqlPrimaryKeysMetaRequestPb.newBuilder()
+        if (catalog != null) requestBuilder.catalog = catalog
+        if (schema != null) requestBuilder.schema = schema
+        if (table != null) requestBuilder.table = table
+
+        val response = connection.sqlService.primaryKeysMetadata(requestBuilder.build())
+        StatementResultSet(response, meta = ResultSetMetaData(response.columnsList))
     }
 
     override fun getTableTypes(): ResultSet {
