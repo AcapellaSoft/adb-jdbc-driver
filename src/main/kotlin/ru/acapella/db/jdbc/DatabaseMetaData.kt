@@ -12,7 +12,10 @@ class DatabaseMetaData(
     private val connection: ru.acapella.db.jdbc.Connection,
     private val meta: SqlDatabaseMetadataPb
 ) : DatabaseMetaData {
-    private val databaseVersionParts = meta.databaseProductVersion.split(".").map { it.toInt() }
+    private val databaseVersionParts = meta.databaseProductVersion
+        .split(".")
+        .take(2)
+        .map { it.toInt() }
 
     override fun getCatalogTerm() = "catalog"
     override fun supportsSubqueriesInQuantifieds() = true
