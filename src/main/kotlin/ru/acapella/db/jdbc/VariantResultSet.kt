@@ -23,6 +23,7 @@ private class TypeMapperBuilder {
 private val typeMapper = TypeMapperBuilder().apply {
     // todo all mappers
     map<Int, Long> { toLong() }
+    map<Int, String> { toString() }
     map<Long, Int> { toInt() }
     map<BigDecimal, Double> { toDouble() }
     map<Double, BigDecimal> { BigDecimal.valueOf(this) }
