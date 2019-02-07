@@ -221,12 +221,7 @@ abstract class VariantResultSet(private var fetchSize: Int) : ResultSet {
     override fun getInt(columnLabel: String): Int = getColumn(columnLabel) ?: 0
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Any?> getObject(columnIndex: Int, type: Class<T>): T {
-        val sqlType = columnType(columnIndex)
-        val value: Any? = getColumn(columnIndex)
-        if (value != null && !type.isInstance(value)) throw SQLException("Cannot convert column type $sqlType to $type")
-        return value as T
-    }
+    override fun <T : Any?> getObject(columnIndex: Int, type: Class<T>) = getColumn(type, columnIndex)
 
     override fun <T : Any?> getObject(columnLabel: String, type: Class<T>): T {
         val index = findColumn(columnLabel)
@@ -240,6 +235,11 @@ abstract class VariantResultSet(private var fetchSize: Int) : ResultSet {
     }
 
     private inline fun <reified T> getColumn(columnIndex: Int): T {
+        return getColumn(T::class.java, columnIndex)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> getColumn(clazz: Class<T>, columnIndex: Int): T {
         val variant = row[columnIndex - 1]
         val value: Any? = when {
             variant.hasVDecimal() -> BigDecimal(variant.vDecimal)
@@ -258,12 +258,12 @@ abstract class VariantResultSet(private var fetchSize: Int) : ResultSet {
             else -> null
         }
         wasNull = value == null
-        if (value == null || T::class.java.isInstance(value)) return value as T
+        if (value == null || clazz.isInstance(value)) return value as T
 
         val converted = typeMapper[value::class.java]
-            ?.get(T::class.java)
+            ?.get(clazz)
             ?.invoke(value)
-            ?: throw SQLException("Cannot convert ${value::class.java} to ${T::class.java}")
+            ?: throw SQLException("Column $columnIndex: cannot convert ${value::class.java} to $clazz")
         return converted as T
     }
 
