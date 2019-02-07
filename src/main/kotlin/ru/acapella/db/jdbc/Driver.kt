@@ -50,8 +50,8 @@ class Driver : Driver {
         var sqlStreamService = SqlGrpc.newStub(channel)
         val meta = sqlService.metadata(Empty.getDefaultInstance())
 
-        val userName = info["user"] as String?
-        val password = info["password"] as String?
+        val userName = (info["user"] as String?)?.ifBlank { null }
+        val password = (info["password"] as String?)?.ifBlank { null }
         if (userName != null && password != null) {
             val response = sqlService.login(LoginRequest.newBuilder()
                 .setUserName(userName)
