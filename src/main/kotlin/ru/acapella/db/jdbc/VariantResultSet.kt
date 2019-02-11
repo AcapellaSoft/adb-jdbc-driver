@@ -4,6 +4,7 @@ import ru.acapella.db.grpc.SqlVariantPb
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
+import java.nio.charset.Charset
 import java.sql.*
 import java.sql.Array
 import java.sql.Date
@@ -21,12 +22,89 @@ private class TypeMapperBuilder {
 }
 
 private val typeMapper = TypeMapperBuilder().apply {
-    // todo all mappers
-    map<Int, Long> { toLong() }
-    map<Int, String> { toString() }
-    map<Long, Int> { toInt() }
+    map<BigDecimal, String> { toString() }
     map<BigDecimal, Double> { toDouble() }
-    map<Double, BigDecimal> { BigDecimal.valueOf(this) }
+    map<BigDecimal, Float> { toFloat() }
+    map<BigDecimal, Long> { toLong() }
+    map<BigDecimal, Int> { toInt() }
+    map<BigDecimal, Short> { toShort() }
+
+    map<ByteArray, String> { toString(Charset.defaultCharset()) }
+
+    map<Byte, BigDecimal> { BigDecimal(toInt()) }
+    map<Byte, String> { toString() }
+    map<Byte, Double> { toDouble() }
+    map<Byte, Float> { toFloat() }
+    map<Byte, Long> { toLong() }
+    map<Byte, Int> { toInt() }
+    map<Byte, Short> { toShort() }
+
+    map<String, BigDecimal> { BigDecimal(this) }
+    map<String, ByteArray> { toByteArray() }
+    map<String, Double> { toDouble() }
+    map<String, Float> { toFloat() }
+    map<String, Long> { toLong() }
+    map<String, Int> { toInt() }
+    map<String, Boolean> { toBoolean() }
+    map<String, Date> { Date.valueOf(this) }
+    map<String, Short> { toShort() }
+    map<String, Time> { Time.valueOf(this) }
+    map<String, Timestamp> { Timestamp.valueOf(this) }
+
+    map<Double, BigDecimal> { BigDecimal(this) }
+    map<Double, Byte> { toByte() }
+    map<Double, String> { toString() }
+    map<Double, Float> { toFloat() }
+    map<Double, Long> { toLong() }
+    map<Double, Int> { toInt() }
+    map<Double, Short> { toShort() }
+
+    map<Float, BigDecimal> { BigDecimal(this.toDouble()) }
+    map<Float, Byte> { toByte() }
+    map<Float, String> { toString() }
+    map<Float, Double> { toDouble() }
+    map<Float, Float> { toFloat() }
+    map<Float, Long> { toLong() }
+    map<Float, Int> { toInt() }
+    map<Float, Short> { toShort() }
+
+    map<Long, BigDecimal> { BigDecimal(this) }
+    map<Long, Byte> { toByte() }
+    map<Long, String> { toString() }
+    map<Long, Double> { toDouble() }
+    map<Long, Float> { toFloat() }
+    map<Long, Long> { toLong() }
+    map<Long, Int> { toInt() }
+    map<Long, Short> { toShort() }
+
+    map<Int, BigDecimal> { BigDecimal(this) }
+    map<Int, Byte> { toByte() }
+    map<Int, String> { toString() }
+    map<Int, Double> { toDouble() }
+    map<Int, Float> { toFloat() }
+    map<Int, Long> { toLong() }
+    map<Int, Int> { toInt() }
+    map<Int, Short> { toShort() }
+
+    map<Boolean, String> { toString() }
+
+    map<Date, String> { toString() }
+    map<Date, Long> { time }
+
+    map<Short, BigDecimal> { BigDecimal(this.toInt()) }
+    map<Short, Byte> { toByte() }
+    map<Short, String> { toString() }
+    map<Short, Double> { toDouble() }
+    map<Short, Float> { toFloat() }
+    map<Short, Long> { toLong() }
+    map<Short, Int> { toInt() }
+    map<Short, Short> { toShort() }
+
+    map<Time, String> { toString() }
+    map<Time, Long> { time }
+
+    map<Timestamp, String> { toString() }
+    map<Timestamp, Long> { time }
 }.map
 
 abstract class VariantResultSet(private var fetchSize: Int) : ResultSet {
