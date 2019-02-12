@@ -14,7 +14,7 @@ class StreamResultSet(
     private val statement: ru.acapella.db.jdbc.Statement
 ) : VariantResultSet(statement.fetchSize) {
     private var resultSet: SqlResultSetPb = receiveQueue.take().getOrThrow()
-    private val meta = ResultSetMetaData(resultSet.columnsList)
+    private val meta = ResultSetMetaData(resultSet.columnsList, resultSet.rowsList)
     private var state = State.BEFORE_FIRST
     private var rowIndex = -1
 

@@ -100,7 +100,7 @@ class Connection(
         val response = sqlService.prepare(request.build())
 
         val parameterMeta = ParameterMetaData(response.parametersList)
-        val resultMeta = ResultSetMetaData(response.columnsList)
+        val resultMeta = ResultSetMetaData(response.columnsList, null)
         PreparedStatement(this, sql, parameterMeta, resultMeta)
     }
 

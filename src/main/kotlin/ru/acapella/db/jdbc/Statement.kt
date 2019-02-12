@@ -126,7 +126,11 @@ open class Statement(private val connection: Connection) : Statement {
             connection.database?.let { requestBuilder.database = it }
             val response = connection.sqlService.execute(requestBuilder.build())
             if (response.hasResultSet()) {
-                resultSet = StatementResultSet(response.resultSet, this, ResultSetMetaData(response.resultSet.columnsList))
+                resultSet = StatementResultSet(
+                    response.resultSet,
+                    this,
+                    ResultSetMetaData(response.resultSet.columnsList, response.resultSet.rowsList)
+                )
                 true
             } else {
                 updateCount = response.rowsCount.toInt()

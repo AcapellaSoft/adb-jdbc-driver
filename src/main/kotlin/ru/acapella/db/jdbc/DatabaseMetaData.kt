@@ -210,7 +210,7 @@ class DatabaseMetaData(
         if (types != null) requestBuilder.addAllTypes(types.asList())
 
         val response = connection.sqlService.tablesMetadata(requestBuilder.build())
-        StatementResultSet(response, meta = ResultSetMetaData(response.columnsList))
+        StatementResultSet(response, meta = ResultSetMetaData(response.columnsList, response.rowsList))
     }
 
     override fun getPrimaryKeys(catalog: String?, schema: String?, table: String?): ResultSet = convertError {
@@ -220,7 +220,7 @@ class DatabaseMetaData(
         if (table != null) requestBuilder.table = table
 
         val response = connection.sqlService.primaryKeysMetadata(requestBuilder.build())
-        StatementResultSet(response, meta = ResultSetMetaData(response.columnsList))
+        StatementResultSet(response, meta = ResultSetMetaData(response.columnsList, response.rowsList))
     }
 
     override fun getTableTypes(): ResultSet {
@@ -248,7 +248,7 @@ class DatabaseMetaData(
         if (columnNamePattern != null) requestBuilder.columnNamePattern = columnNamePattern
 
         val response = connection.sqlService.columnsMetadata(requestBuilder.build())
-        StatementResultSet(response, meta = ResultSetMetaData(response.columnsList))
+        StatementResultSet(response, meta = ResultSetMetaData(response.columnsList, response.rowsList))
     }
 
     override fun getIndexInfo(catalog: String?, schema: String?, table: String?, unique: Boolean, approximate: Boolean): ResultSet {

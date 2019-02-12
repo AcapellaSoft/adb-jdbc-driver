@@ -1,11 +1,19 @@
 package ru.acapella.db.jdbc
 
 import ru.acapella.db.grpc.SqlColumnMetaPb
+import ru.acapella.db.grpc.SqlRowPb
 import java.sql.ResultSetMetaData
 import java.sql.SQLException
 import java.sql.SQLFeatureNotSupportedException
+import java.sql.Types
+import kotlin.math.max
 
-class ResultSetMetaData(private val columns: List<SqlColumnMetaPb>) : ResultSetMetaData {
+class ResultSetMetaData(
+    private val columns: List<SqlColumnMetaPb>,
+    private val rows: List<SqlRowPb>?
+) : ResultSetMetaData {
+    private val displaySizes = columns.mapTo(ArrayList()) { it.displaySize }
+
     override fun getCatalogName(column: Int) = throw SQLFeatureNotSupportedException()
 
     override fun getTableName(column: Int): String = columns[column - 1].table
@@ -25,7 +33,18 @@ class ResultSetMetaData(private val columns: List<SqlColumnMetaPb>) : ResultSetM
     override fun getColumnName(column: Int): String = columns[column - 1].name
     override fun isAutoIncrement(column: Int) = false
     override fun getColumnCount() = columns.size
-    override fun getColumnDisplaySize(column: Int) = columns[column - 1].displaySize
+
+    override fun getColumnDisplaySize(column: Int): Int {
+        var size = displaySizes[column - 1]
+        if (size < 0 && columns[column - 1].type == Types.VARCHAR && rows != null) {
+            size = 0
+            for (row in rows) {
+                size = max(size, row.getFields(column - 1).vString.length)
+            }
+            displaySizes[column - 1] = size
+        }
+        return size
+    }
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> unwrap(iface: Class<T>): T {
