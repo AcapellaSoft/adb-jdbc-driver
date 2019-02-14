@@ -36,7 +36,9 @@ class ResultSetMetaData(
 
     override fun getColumnDisplaySize(column: Int): Int {
         var size = displaySizes[column - 1]
-        if (size < 0 && columns[column - 1].type == Types.VARCHAR && rows != null) {
+        val type = columns[column - 1].type
+        // fixme better display size
+        if (size < 0 && (type == Types.VARCHAR || type == Types.CHAR) && rows != null) {
             size = 0
             for (row in rows) {
                 size = max(size, row.getFields(column - 1).vString.length)
